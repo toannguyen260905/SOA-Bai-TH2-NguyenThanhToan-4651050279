@@ -1,66 +1,20 @@
 # BÁO CÁO BÀI THỰC HÀNH SỐ 2
 
-**Nội dung:** Router, Middleware và bảo mật JWT trong RESTful API  
-**Framework sử dụng:** Express.js
+**Router, Middleware và bảo mật JWT trong RESTful API**
 
-## 1. Yêu cầu bài thực hành
+## 1. Em thực hiện bài như thế nào
 
-Trong bài này, em sử dụng Express.js để làm chức năng đăng nhập và xác thực người dùng bằng JWT. Sau khi đăng nhập thành công, người dùng nhận được token để truy cập các API cần xác thực.
+Ở bài thực hành số 2, em tiếp tục sử dụng Express.js từ bài 1 để làm chức năng đăng nhập và xác thực bằng JWT. API Hello World ở bài trước có thể gọi trực tiếp, còn trong bài này người dùng phải có token hợp lệ mới truy cập được.
 
-Các nội dung cần thực hiện gồm:
+Đầu tiên, em cài các thư viện của project bằng `npm install`. Ngoài Express, bài sử dụng `jsonwebtoken` để tạo và kiểm tra token, `bcryptjs` để băm mật khẩu và `dotenv` để đọc cấu hình từ file `.env`. Dữ liệu người dùng được lưu bằng SQLite.
 
-- Sử dụng Router để khai báo các API.
-- Làm API đăng nhập, kiểm tra tài khoản và cấp JWT.
-- Làm API `/auth` để xác thực token.
-- Viết middleware kiểm tra token cho API Hello World của bài 1.
-- Kiểm tra kết quả bằng Postman.
+Sau khi cấu hình khóa JWT, em chạy `npm run seed` để tạo tài khoản mẫu rồi chạy `npm start`. Terminal hiện dòng `Server running at http://localhost:3001`, cho biết server đã chạy. Khi chạy seed, chương trình báo tài khoản đã tồn tại nên không cần tạo lại.
 
-## 2. Các công cụ và thư viện sử dụng
+## 2. Phần đăng nhập
 
-| Công cụ, thư viện | Mục đích sử dụng |
-| --- | --- |
-| Node.js và Express.js | Chạy server và xây dựng API |
-| jsonwebtoken | Tạo token và kiểm tra token |
-| bcryptjs | Băm mật khẩu và so sánh khi đăng nhập |
-| dotenv | Đọc cấu hình trong file `.env` |
-| SQLite | Lưu tài khoản và token |
-| Postman | Gửi yêu cầu để kiểm tra API |
+Em sử dụng tài khoản mẫu `student` với mật khẩu `Student@123` để thử đăng nhập. Thông tin được lưu trong bảng `User`, gồm bốn cột là `IdUser`, `UserName`, `Password` và `Token`. Mật khẩu trong database được băm bằng bcrypt, còn cột Token lưu token của lần đăng nhập gần nhất.
 
-Em dùng SQLite để lưu dữ liệu ngay trong project. Địa chỉ chạy chương trình mặc định là `http://localhost:3001`.
-
-## 3. Nội dung thực hiện
-
-### 3.1. Tạo bảng người dùng
-
-Bảng `User` có các cột theo đề bài:
-
-| Tên cột | Kiểu dữ liệu | Nội dung lưu |
-| --- | --- | --- |
-| IdUser | INTEGER, khóa chính, tự tăng | Mã người dùng |
-| UserName | VARCHAR(255) | Tên đăng nhập, không được trùng |
-| Password | VARCHAR(255) | Mật khẩu đã băm |
-| Token | VARCHAR(255) | Token của lần đăng nhập gần nhất |
-
-Tài khoản mẫu dùng để thử chương trình là `student`, mật khẩu `Student@123`. File `scripts/seed.js` tạo tài khoản này. Nếu tài khoản đã có thì chương trình giữ nguyên dữ liệu.
-
-### 3.2. Chia các file xử lý
-
-Em chia chương trình thành các phần để dễ theo dõi:
-
-- `server.js`: khởi động server.
-- `app.js`: ghép các route và middleware.
-- `routes`: khai báo đường dẫn và phương thức của API.
-- `controllers/auth.controller.js`: xử lý đăng nhập và trả kết quả xác thực.
-- `middleware/auth.middleware.js`: kiểm tra token trước khi cho truy cập API.
-- `repositories/user.repository.js`: chứa các câu lệnh truy vấn người dùng.
-- `db.js`: tạo và kết nối database.
-- `config.js`: đọc cấu hình như cổng chạy, khóa JWT và thời hạn token.
-
-### 3.3. Làm API đăng nhập
-
-API đăng nhập sử dụng phương thức `POST` với đường dẫn `/`.
-
-Trên Postman, dữ liệu được gửi trong **Body → raw → JSON**:
+API đăng nhập là `POST http://localhost:3001/`. Trên Postman, em gửi tên đăng nhập và mật khẩu trong phần Body với dạng JSON. Theo yêu cầu của đề, mật khẩu được chuyển sang Base64 ở client trước khi gửi. Dữ liệu gửi đi tương ứng là:
 
 ```json
 {
@@ -69,112 +23,64 @@ Trên Postman, dữ liệu được gửi trong **Body → raw → JSON**:
 }
 ```
 
-Chuỗi `U3R1ZGVudEAxMjM=` là mật khẩu `Student@123` đã chuyển sang Base64 tại client theo yêu cầu đề bài. Trong collection, script của Postman thực hiện bước chuyển đổi này trước khi gửi.
+Lúc thử trên Postman, em thấy phần Params không có dữ liệu nhưng nhấn Send vẫn đăng nhập thành công. Sau khi xem lại, em hiểu là request này gửi thông tin trong Body nên không cần điền Params. Server lấy thông tin bằng `req.body`, còn Params là dữ liệu gửi kèm trên URL và được đọc bằng `req.query`.
 
-Server lấy thông tin từ `req.body`, giải mã mật khẩu rồi kiểm tra với dữ liệu trong bảng User bằng `bcrypt.compare()`. Nếu đúng thì tạo JWT, lưu token và trả về cho client. Nếu sai tên đăng nhập hoặc mật khẩu thì trả mã `401`.
+Trong collection, Body dùng các biến `{{userName}}` và `{{passwordBase64}}`. Khi gửi request, Postman thay các biến này bằng giá trị thật. Phần script chạy trước request chuyển mật khẩu sang Base64 nên em không phải nhập lại chuỗi Base64 mỗi lần thử.
 
-Dữ liệu đăng nhập nằm trong Body nên tab Params có thể để trống. Params chỉ dùng khi cần gửi dữ liệu trên URL, còn API này không đọc tài khoản từ đó.
+Ở phía server, chương trình giải mã mật khẩu, tìm tài khoản trong database rồi dùng `bcrypt.compare()` để kiểm tra. Nếu thông tin đúng thì server tạo JWT, lưu lại và trả token về. Nếu sai tên đăng nhập hoặc mật khẩu thì trả mã `401`.
 
-Kết quả đăng nhập thành công có dạng như sau (`<token>` là phần viết gọn của JWT):
+Khi em gửi request Login với tài khoản mẫu, Postman trả về `200 OK`. Kết quả có token, loại token là `Bearer`, thời hạn `1h` và tên người dùng là `student`.
 
-```json
-{
-  "token": "<token>",
-  "tokenType": "Bearer",
-  "expiresIn": "1h",
-  "user": {
-    "id": 1,
-    "userName": "student"
-  }
-}
-```
+## 3. Phần JWT và middleware
 
-### 3.4. Tạo và kiểm tra JWT
+Sau phần đăng nhập, em tìm hiểu cách dùng token cho những request tiếp theo. JWT có ba phần là `header`, `payload` và `signature`, ngăn cách nhau bằng dấu chấm. Trong bài này, payload chứa ID người dùng, thời điểm tạo và thời điểm hết hạn. Mật khẩu không được đưa vào token.
 
-JWT gồm ba phần, được ngăn cách bằng dấu chấm:
+Em hiểu rằng Base64 có thể giải mã lại, vì vậy nó không phải cách để bảo mật mật khẩu. Bài chỉ dùng Base64 khi gửi dữ liệu theo yêu cầu đề; mật khẩu lưu trong database vẫn được băm bằng bcrypt. Tương tự, đọc được payload của JWT chưa có nghĩa là token hợp lệ, mà server còn phải kiểm tra chữ ký và thời hạn.
 
-```text
-header.payload.signature
-```
-
-- Header chứa loại token và thuật toán ký. Trong bài dùng HS256.
-- Payload chứa ID người dùng (`sub`), thời điểm tạo (`iat`) và thời điểm hết hạn (`exp`).
-- Signature là chữ ký để kiểm tra token có hợp lệ hay không.
-
-Token mặc định có hiệu lực trong 1 giờ. Khóa ký và thời hạn token được cấu hình trong `.env`. Mật khẩu không được đưa vào token.
-
-Base64 có thể giải mã lại nên không dùng để lưu mật khẩu an toàn. Trong database, mật khẩu được lưu dưới dạng hash của bcrypt. Với JWT, xem được nội dung payload chưa có nghĩa là token hợp lệ, vẫn phải kiểm tra bằng `jwt.verify()`.
-
-### 3.5. Viết middleware bảo vệ API
-
-Khi gọi API cần xác thực, client gửi token trong header:
+Để gửi token, request cần có header:
 
 ```http
 Authorization: Bearer <token>
 ```
 
-Middleware lấy token, kiểm tra chữ ký và thời hạn, sau đó tìm người dùng theo ID trong token. Nếu hợp lệ, middleware gán người dùng vào `req.user` và gọi `next()` để chạy phần xử lý API. Nếu thiếu token, token sai hoặc hết hạn thì trả mã `401`.
+Phần kiểm tra này nằm trong `auth.middleware.js`. Middleware lấy token từ header rồi gọi `jwt.verify()`. Nếu token hợp lệ và người dùng còn tồn tại, chương trình gán thông tin vào `req.user` và gọi `next()` để tiếp tục xử lý API. Nếu token bị thiếu, sai hoặc hết hạn thì dừng lại và trả mã `401`.
 
-Em sử dụng middleware này cho cả API `/auth` và API Hello World.
+Em dùng chung middleware cho API `/auth` và API Hello World. Các API của bài gồm:
 
-| Phương thức | Đường dẫn | Chức năng | Cần token |
-| --- | --- | --- | --- |
-| POST | `/` | Đăng nhập và nhận token | Không |
-| GET | `/auth` | Kiểm tra token và trả thông tin người dùng | Có |
-| GET | `/` | Trả về `Hello World!` | Có |
+| API | Công việc thực hiện |
+| --- | --- |
+| `POST /` | Kiểm tra đăng nhập và cấp token |
+| `GET /auth` | Kiểm tra token, trả thông tin người dùng |
+| `GET /` | Trả `Hello World!` khi có token hợp lệ |
+
+Các đường dẫn này được khai báo trong thư mục `routes`. Phần xử lý đăng nhập nằm trong controller, còn các câu SQL nằm trong `user.repository.js`. Nhờ chia như vậy, em có thể xem riêng phần đường dẫn, phần xử lý và phần truy vấn dữ liệu.
 
 ## 4. Kết quả chạy thử
 
-### 4.1. Kiểm tra bằng Postman
+Em dùng collection Postman của bài để kiểm tra các request. Request Login có script lưu token vào biến collection sau khi đăng nhập thành công, nên các request Authenticate và Hello World có thể dùng lại token đó.
 
-Khi gửi request Login với tài khoản mẫu, Postman trả về **200 OK**. Phần kết quả có JWT, thời hạn `1h` và thông tin người dùng `student`. Hai kiểm tra đi kèm request Login đều đạt (`2/2`).
+Ở lần đăng nhập đã thử trên Postman, kết quả là `200 OK` và mục Test Results hiển thị `2/2`. Kết quả kiểm tra toàn bộ collection bằng Newman cũng ghi nhận 7 request chạy được và 10 kiểm tra đạt. Em tổng hợp kết quả như sau:
 
-Collection có sẵn các request để thử lần lượt đăng nhập, xác thực, Hello World và các trường hợp lỗi. Kết quả chạy collection bằng Newman (công cụ chạy collection Postman) là **7 request, 10 kiểm tra đạt, không có lỗi**.
-
-| Trường hợp | Kết quả |
+| Trường hợp kiểm tra | Kết quả nhận được |
 | --- | --- |
-| Đăng nhập đúng tài khoản và mật khẩu | 200, nhận được token |
-| Gọi `/auth` với token hợp lệ | 200, trả thông báo token hợp lệ và thông tin người dùng |
-| Gọi Hello World với token hợp lệ | 200, trả `Hello World!` |
-| Gọi API mà không gửi token | 401, báo thiếu token |
-| Gửi token không hợp lệ | 401, không cho truy cập |
-| Nhập sai mật khẩu | 401, báo sai thông tin đăng nhập |
-| Gửi thiếu thông tin đăng nhập | 400, báo dữ liệu không hợp lệ |
+| Đăng nhập đúng | `200`, có token và thông tin người dùng |
+| Gọi `/auth` với token hợp lệ | `200`, thông báo token hợp lệ |
+| Gọi Hello World với token hợp lệ | `200`, trả về `Hello World!` |
+| Không gửi token | `401`, báo thiếu token |
+| Gửi token sai | `401`, không cho truy cập |
+| Nhập sai mật khẩu | `401`, báo sai thông tin đăng nhập |
+| Gửi thiếu thông tin đăng nhập | `400`, báo dữ liệu không hợp lệ |
 
-### 4.2. Kiểm tra bằng lệnh npm test
+Ngoài collection Postman, bài có các kiểm tra tự động trong file `test/api.test.js`, chạy bằng lệnh `npm test`. Kết quả kiểm tra ngày 28/09/2026 là 8 test đạt, không có test lỗi. Trong đó có các trường hợp token hết hạn, sai chữ ký, sai thuật toán và mở lại database vẫn đọc được dữ liệu đã lưu.
 
-Chương trình có file `test/api.test.js` để kiểm tra thêm các trường hợp như token hết hạn, sai chữ ký, sai thuật toán và dữ liệu đầu vào không hợp lệ.
+Qua kết quả này, em thấy API Hello World đã được bảo vệ bằng middleware: có token hợp lệ thì nhận được nội dung, còn thiếu hoặc sai token thì bị từ chối.
 
-Chạy trong thư mục `Lab-2`:
+## 5. Những điều em rút ra sau bài làm
 
-```powershell
-npm test
-```
+Sau bài này, em hiểu rõ hơn luồng đăng nhập bằng JWT. Người dùng gửi tài khoản và mật khẩu để lấy token, rồi dùng token trong header cho các lần gọi API cần xác thực tiếp theo.
 
-Kết quả kiểm tra ngày 28/09/2026 là **8 test đạt, 0 test lỗi**, gồm một test tổng và bảy test con. Các kiểm tra cũng xác nhận token được lưu, mật khẩu được băm và dữ liệu vẫn còn khi mở lại database. Phần test sử dụng database tạm riêng.
+Phần em chú ý nhất là sự khác nhau giữa Body và Params khi dùng Postman. Trước đó em thắc mắc vì sao không nhập gì trong Params mà vẫn gửi được, sau đó em hiểu dữ liệu đã nằm trong Body và được lấy từ các biến của collection.
 
-## 5. Cách chạy và demo bài
+Em cũng hiểu thêm vai trò của middleware. Thay vì viết lại phần kiểm tra token trong từng API, có thể viết một middleware rồi dùng chung cho nhiều route. Hàm `next()` cho request đi tiếp sau khi kiểm tra thành công.
 
-Để chạy lần đầu, cài thư viện bằng `npm install`, tạo file `.env` từ `.env.example` nếu chưa có và điền khóa `JWT_SECRET`. Sau đó chạy:
-
-```powershell
-npm run seed
-npm start
-```
-
-Khi server chạy, mở Postman và import file `postman/Lab-2.postman_collection.json`. Thứ tự demo là:
-
-1. Gửi **01 Login** để đăng nhập và lấy token. Postman tự lưu token vào biến collection.
-2. Gửi **02 Authenticate** để kiểm tra token.
-3. Gửi **03 Hello World** để xem kết quả khi có token hợp lệ.
-4. Gửi các request còn lại để xem lỗi khi thiếu token, token sai hoặc sai mật khẩu.
-
-Để thử token hết hạn, có thể đổi `JWT_EXPIRES_IN=5s`, khởi động lại server rồi đăng nhập lại. Sau khi đợi hơn 5 giây, gọi `/auth` sẽ nhận `401`. Khi demo xong, đổi thời hạn về `1h`.
-
-## 6. Nhận xét sau khi thực hiện
-
-Bài làm đã thực hiện được chức năng đăng nhập, cấp JWT và xác thực trước khi truy cập API Hello World. Các trường hợp đúng trả về kết quả, còn trường hợp thiếu hoặc sai thông tin thì có thông báo lỗi tương ứng.
-
-Qua bài này, em hiểu rõ hơn cách dùng Router để chia API, cách middleware kiểm tra request trước khi xử lý và cách gửi token trong header. Em cũng phân biệt được dữ liệu gửi trong Body với Params, cũng như Base64 với việc băm mật khẩu.
-
-Bài hiện mới có tài khoản mẫu để thử đăng nhập, chưa làm đăng ký, phân quyền hoặc đăng xuất. Token cũ vẫn có thể dùng đến khi hết hạn nếu người dùng còn tồn tại và khóa ký không thay đổi; đăng nhập lại chưa thu hồi token cũ.
+Bài hiện đã làm được đăng nhập, cấp token, xác thực token và bảo vệ Hello World. Phần đăng ký, phân quyền và đăng xuất chưa được thực hiện. Token cũ cũng chưa bị thu hồi khi đăng nhập lại; nó vẫn có thể sử dụng đến khi hết hạn nếu người dùng còn tồn tại và khóa ký không thay đổi.
