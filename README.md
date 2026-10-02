@@ -2,7 +2,7 @@
 
 **Router, Middleware và bảo mật JWT trong RESTful API**
 
-## 1. Cách em thực hiện##
+## 1. Cách em thực hiện
 
 Ở bài thực hành số 2, em tiếp tục sử dụng Express.js từ bài 1 để làm chức năng đăng nhập và xác thực bằng JWT. API Hello World ở bài trước có thể gọi trực tiếp, còn trong bài này người dùng phải có token hợp lệ mới truy cập được.
 
